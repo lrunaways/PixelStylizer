@@ -22,9 +22,20 @@ def gan_train_loop(train_dataloader, val_dataloader, gan_model, device, log_freq
     gan_model.to(device)
     gan_model.train()
 
+    gen_loss = {}
+    disk_loss = {}
     for i, (x, y_real, colours) in enumerate(tqdm(train_dataloader)):
-        gan_model.opt_G
-        gan_loss.accumulate_gradients(phase, x, y_real. gain=1.0)
+        gan_model.zero_grad()
+        gen_loss_ = gan_loss.accumulate_gradients("Gadv", x, y_real, gain=1.0)
+        disk_loss_ = gan_loss.accumulate_gradients("Dboth", x, y_real, gain=1.0)
+        gan_model.opt_step()
+
+        for key in gen_loss_:
+            gen_loss[key] = gen_loss.get(key, 0)*0.8 + gen_loss_[key]*0.2
+        for key in disk_loss_:
+            disk_loss[key] = disk_loss.get(key, 0)*0.8 + disk_loss_[key]*0.2
+        print(gen_loss)
+        print(disk_loss)
         if i % log_freq == 0:
             iteration = i + epoch * len(train_dataloader)
             gan_model.G.eval()
@@ -53,7 +64,7 @@ def train_loop(train_dataloader, val_dataloader,
         if i % log_freq == 0:
             iteration = i + epoch * len(train_dataloader)
             model.eval()
-            save_images(model.G, val_dataloader.dataset, save_dirpath, [0], iteration, device)
+            save_images(model, val_dataloader.dataset, save_dirpath, [0], iteration, device)
             model.train()
 
         total_loss.backward()
@@ -65,9 +76,9 @@ def trainer(params):
     np.random.seed(params['random_seed'])
     torch.manual_seed(params['random_seed'])
 
-    torch.backends.cudnn.benchmark = True    # Improves training speed.
-    torch.backends.cuda.matmul.allow_tf32 = False       # Improves numerical accuracy.
-    torch.backends.cudnn.allow_tf32 = False             # Improves numerical accuracy.
+    # torch.backends.cudnn.benchmark = True    # Improves training speed.
+    # torch.backends.cuda.matmul.allow_tf32 = False       # Improves numerical accuracy.
+    # torch.backends.cudnn.allow_tf32 = False             # Improves numerical accuracy.
 
     train_dataloader, val_dataloader = get_dataloaders(
         dirpath=params['dirpath'],
@@ -78,6 +89,11 @@ def trainer(params):
     # Construct networks and optimizer
     GAN = BasicGAN(G_lr=params['G_lr'], D_lr=params['D_lr'], device=params['device'])
 
+    # dummy forward to initialize Lazy modules
+    x, y, _ = next(iter(train_dataloader))
+    GAN.G(x)
+    GAN.D(torch.concat([x, y], axis=1))
+    del x, y, _
 
     # Resume from existing pickle
     pass
@@ -85,10 +101,17 @@ def trainer(params):
     # Setup augmentation
     pass
 
+    #TODO: endless iterations instead of epochs
     for epoch in tqdm(range(params['n_epochs'])):
 
         # Train
-        gan_train_loop(train_dataloader, GAN, device=params['device'])
+        gan_train_loop(train_dataloader, val_dataloader,
+                       GAN, device=params['device'],
+                       log_freq=params['log_freq'],
+                       epoch=epoch,
+                       save_dirpath=params['save_dirpath']
+                       )
+
         # train_loop(train_dataloader, val_dataloader,
         #            GAN.G, GAN.opt_G,
         #            device=params['device'],

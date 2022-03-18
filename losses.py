@@ -53,25 +53,34 @@ class GANLoss:
 
     def accumulate_gradients(self, phase, x, y, gain=1.0):
         assert phase in ['Gboth', 'Gadv', 'Gbasic', 'Dmain', 'Dreg', 'Dboth']
-
-        if phase in ['Gboth', 'Gbasic']:
-            basic_loss = self.l1_loss(x, y)
-            basic_loss.mean().mul(gain).backward()
-
+        if phase[0] == 'G':
+            self.G.requires_grad_(True)
+            self.D.requires_grad_(False)
+        elif phase[0] == 'D':
+            self.G.requires_grad_(False)
+            self.D.requires_grad_(True)
+        loss = {}
         # Gadv: Maximize logits for generated images.
         if phase in ['Gboth', 'Gadv']:
             y_gen = self.run_G(x)
+            basic_loss = 0
+            if phase == 'Gboth':
+                basic_loss = self.l1_loss(y_gen, y)
+                loss['basic_loss'] = basic_loss
             gen_logits = self.run_D(x, y_gen)
-            loss_Gmain = torch.nn.functional.softplus(-gen_logits)
-            loss_Gmain.mean().mul(gain).backward()
+            loss_Gadv = torch.nn.functional.softplus(-gen_logits)
+            loss_Gadv = loss_Gadv.mean()
+            loss['loss_Gadv'] = loss_Gadv
+            (loss_Gadv + basic_loss).mul(gain).backward()
 
         # Dmain: Minimize logits for generated images.
-        loss_Dgen = 0
         if phase in ['Dmain', 'Dboth']:
             y_gen = self.run_G(x)
             gen_logits = self.run_D(x, y_gen)
             loss_Dgen = torch.nn.functional.softplus(gen_logits)
-            loss_Dgen.mean().mul(gain).backward()
+            loss_Dgen = loss_Dgen.mean()
+            loss['loss_Dgen'] = loss_Dgen
+            loss_Dgen.mul(gain).backward()
 
         # Dmain: Maximize logits for real images.
         # Dr1: Apply R1 regularization.
@@ -83,6 +92,8 @@ class GANLoss:
             loss_Dreal = 0
             if phase in ['Dmain', 'Dboth']:
                 loss_Dreal = torch.nn.functional.softplus(-real_logits)
+                loss_Dreal = loss_Dreal.mean()
+                loss['loss_Dreal'] = loss_Dreal
 
             loss_Dr1 = 0
             if phase in ['Dreg', 'Dboth']:
@@ -92,7 +103,10 @@ class GANLoss:
                     create_graph=True, only_inputs=True)[0]
                 r1_penalty = r1_grads.square().sum([1, 2, 3])
                 loss_Dr1 = r1_penalty * (self.r1_gamma / 2)
-            (loss_Dreal + loss_Dr1).mean().mul(gain).backward()
+                loss_Dr1 = loss_Dr1.mean()
+                loss['loss_Dr1'] = loss_Dr1
+            (loss_Dreal + loss_Dr1).mul(gain).backward()
+        return loss
 
 def additional_entropy(y_true, y_pred):
     pass

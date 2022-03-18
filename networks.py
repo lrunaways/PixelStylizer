@@ -73,6 +73,14 @@ class BasicGAN:
         self.G.to(device)
         self.D.to(device)
 
+    def zero_grad(self):
+        self.opt_G.zero_grad(set_to_none=True)
+        self.opt_D.zero_grad(set_to_none=True)
+
+    def opt_step(self):
+        self.opt_G.step()
+        self.opt_D.step()
+
     def save_snapshot(self):
         pass
 

@@ -17,7 +17,7 @@ def main():
         "num_workers": 3,
         "G_lr": 2e-3,
         "D_lr": 2e-3,
-        "n_epochs": 3,
+        "n_epochs": 30,
         "device": torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
         "log_freq": 10,
         "runs_dirpath": r"C:\Users\nplak\PycharmProjects\PixelStylizer\runs"
