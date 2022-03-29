@@ -21,12 +21,15 @@ class BasicG(torch.nn.Module):
 
     def forward(self, x):
         input_x = x
+        checkerboard = torch.zeros_like(x)
+        checkerboard[:, :, 0::2, 1::2] = 1.
+        x = torch.concat([x, checkerboard], axis=1)
         for i in range(len(self.blocks)):
-            if i > 4 and i < len(self.blocks) - 1:
+            if i > 1 and i < len(self.blocks) - 1:
                 x = self.blocks[i](x) + x
             else:
                 x = self.blocks[i](x)
-        return x + input_x
+        return x
 
 
 class BasicD(torch.nn.Module):

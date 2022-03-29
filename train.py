@@ -14,10 +14,10 @@ def create_parser():
     # Arguments for stata and models saving
     parser.add_argument("--exp_info", type=str, default="ganwe-lt5", help="")
     parser.add_argument(
-        "--dirpath", type=str, default="D://data//pixelation//*.npy", help=""
+        "--dirpath", type=str, default=r"D:/data/pixelation/*.npy", help=""
     )
     parser.add_argument(
-        "--runs_dirpath", type=str, default=r"C://Users//nplak//PycharmProjects//PixelStylizer//runs", help=""
+        "--runs_dirpath", type=str, default=r"C:/Users/nplak//PycharmProjects/PixelStylizer/runs", help=""
     )
     parser.add_argument(
         "--random_seed", type=int, default=24, help="seed"
@@ -60,7 +60,8 @@ def main(args):
 
     all_runs_paths = glob.glob(os.path.join(params['runs_dirpath'], "*"))
     if all_runs_paths:
-        current_run = max([int(x.split('/')[-1].split('-')[0]) for x in all_runs_paths]) + 1
+        symbol = '\\' if any(['/' in x for x in all_runs_paths]) else '/'
+        current_run = max([int(x.split(symbol)[-1].split('-')[0]) for x in all_runs_paths]) + 1
     else:
         current_run = 0
     current_run_name = str(current_run) + '-' + params['exp_info']
