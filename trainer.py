@@ -26,6 +26,7 @@ def gan_train_loop(train_dataloader, val_dataloader, gan_model, device, log_freq
     disk_loss = {}
     for i, (x, y_real, colours) in enumerate(tqdm(train_dataloader)):
         gan_model.zero_grad()
+        x, y_real, colours = x.to(device), y_real.to(device), colours.to(device)
         gen_loss_ = gan_loss.accumulate_gradients("Gadv", x, y_real, gain=1.0)
         disk_loss_ = gan_loss.accumulate_gradients("Dboth", x, y_real, gain=1.0)
         gan_model.opt_step()
@@ -91,6 +92,7 @@ def trainer(params):
 
     # dummy forward to initialize Lazy modules
     x, y, _ = next(iter(train_dataloader))
+    x, y = x.to(params['device']), y.to(params['device'])
     GAN.G(x)
     GAN.D(torch.concat([x, y], axis=1))
     del x, y, _

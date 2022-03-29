@@ -14,10 +14,10 @@ def create_parser():
     # Arguments for stata and models saving
     parser.add_argument("--exp_info", type=str, default="ganwe-lt5", help="")
     parser.add_argument(
-        "--dirpath", type=str, default="D:\data\pixelation\*.npy", help=""
+        "--dirpath", type=str, default="D://data//pixelation//*.npy", help=""
     )
     parser.add_argument(
-        "--runs_dirpath", type=str, default=r"C:\Users\nplak\PycharmProjects\PixelStylizer\runs", help=""
+        "--runs_dirpath", type=str, default=r"C://Users//nplak//PycharmProjects//PixelStylizer//runs", help=""
     )
     parser.add_argument(
         "--random_seed", type=int, default=24, help="seed"

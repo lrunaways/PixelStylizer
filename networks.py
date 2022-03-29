@@ -13,8 +13,8 @@ class BasicG(torch.nn.Module):
             self.blocks.extend([
                 torch.nn.Sequential(
                         torch.nn.LazyConv2d(1 if i == n_blocks-1 else 64, 3, padding='same'),
-                        torch.nn.LazyInstanceNorm2d(),
-                        torch.nn.ReLU(),
+                        torch.nn.LazyBatchNorm2d(),
+                        torch.nn.LeakyReLU(),
                 )
             ])
         self.blocks = torch.nn.ModuleList(self.blocks)
@@ -22,7 +22,7 @@ class BasicG(torch.nn.Module):
     def forward(self, x):
         input_x = x
         for i in range(len(self.blocks)):
-            if i > 0 and i < len(self.blocks) - 1:
+            if i > 1 and i < len(self.blocks) - 1:
                 x = self.blocks[i](x) + x
             else:
                 x = self.blocks[i](x)
@@ -38,7 +38,7 @@ class BasicD(torch.nn.Module):
             self.blocks.extend([
                 torch.nn.Sequential(
                         torch.nn.LazyConv2d(1 if i == n_blocks-1 else 64, 2, stride=2),
-                        torch.nn.ReLU(),
+                        torch.nn.LeakyReLU(),
                 )
             ])
         self.blocks = torch.nn.ModuleList(self.blocks)

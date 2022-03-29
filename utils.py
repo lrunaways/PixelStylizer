@@ -13,6 +13,6 @@ def save_images(model, dataset, dirpath, idxs, iteration, device):
         pred = model(x[None, ...].to(device))
         axs[0].imshow(x.numpy()[0])
         axs[1].imshow(y.numpy()[0])
-        axs[2].imshow(pred.detach().numpy()[0, 0])
+        axs[2].imshow(pred.detach().cpu().numpy()[0, 0])
         fig.savefig(os.path.join(dirpath, plot_name))
         plt.close()
