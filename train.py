@@ -60,7 +60,7 @@ def main(args):
 
     all_runs_paths = glob.glob(os.path.join(params['runs_dirpath'], "*"))
     if all_runs_paths:
-        current_run = max([int(x.split('\\')[-1].split('-')[0]) for x in all_runs_paths]) + 1
+        current_run = max([int(x.split('/')[-1].split('-')[0]) for x in all_runs_paths]) + 1
     else:
         current_run = 0
     current_run_name = str(current_run) + '-' + params['exp_info']
