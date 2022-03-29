@@ -9,10 +9,11 @@ class BasicG(torch.nn.Module):
         super().__init__()
         self.blocks = []
         n_blocks = 7
+        #TODO: noise to layers
         for i in range(n_blocks):
             self.blocks.extend([
                 torch.nn.Sequential(
-                        torch.nn.LazyConv2d(1 if i == n_blocks-1 else 64, 3, padding='same', padding_mode="reflect"),
+                        torch.nn.LazyConv2d(1 if i == n_blocks-1 else 128, 3, padding='same', padding_mode="reflect"),
                         torch.nn.LazyBatchNorm2d(),
                         torch.nn.LeakyReLU(),
                 )
@@ -22,11 +23,10 @@ class BasicG(torch.nn.Module):
     def forward(self, x):
         input_x = x
         #TODO: attention checkerboard
-        #TODO: check add reversed checkerboard to equalize checkerboard addition
         checkerboard = torch.zeros_like(x)
-        checkerboard[:, :, 0::2, 1::2] = 0.1
-        checkerboard[:, :, 1::2, 0::2] = 0.1
-        x = torch.concat([x, checkerboard, checkerboard*(-1) + 0.2], axis=1)
+        checkerboard[:, :, 0::2, 1::2] = 0.01
+        checkerboard[:, :, 1::2, 0::2] = 0.01
+        x = torch.concat([x, checkerboard], axis=1)
         for i in range(len(self.blocks)):
             if i > 1 and i < len(self.blocks) - 1:
                 x = self.blocks[i](x) + x
