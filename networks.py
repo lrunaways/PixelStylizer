@@ -21,10 +21,12 @@ class BasicG(torch.nn.Module):
 
     def forward(self, x):
         input_x = x
+        #TODO: attention checkerboard
+        #TODO: check add reversed checkerboard to equalize checkerboard addition
         checkerboard = torch.zeros_like(x)
         checkerboard[:, :, 0::2, 1::2] = 0.1
         checkerboard[:, :, 1::2, 0::2] = 0.1
-        x = torch.concat([x, checkerboard], axis=1)
+        x = torch.concat([x, checkerboard, checkerboard*(-1) + 0.2], axis=1)
         for i in range(len(self.blocks)):
             if i > 1 and i < len(self.blocks) - 1:
                 x = self.blocks[i](x) + x
