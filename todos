@@ -1,0 +1,7 @@
+1) Multiple runs of generator on the same image
+2) Modulated convolutions and feature noise
+3) Attention checkerboard
+---4) Discriminator accuracy
+5) Add constraints to number of colors
+6) Add model saving
+7) Predict image enthropy with discriminator and minimize it with generator

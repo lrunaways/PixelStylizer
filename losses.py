@@ -69,6 +69,7 @@ class GANLoss:
                 loss['basic_loss'] = basic_loss
             gen_logits = self.run_D(x, y_gen)
             loss_Gadv = torch.nn.functional.softplus(-gen_logits)
+            # loss_Gadv = (1 - gen_logits)**2
             loss_Gadv = loss_Gadv.mean()
             loss['loss_Gadv'] = loss_Gadv
             (loss_Gadv + basic_loss).mul(gain).backward()
@@ -78,12 +79,14 @@ class GANLoss:
             y_gen = self.run_G(x)
             gen_logits = self.run_D(x, y_gen)
             loss_Dgen = torch.nn.functional.softplus(gen_logits)
+            # loss_Dgen = (gen_logits)**2
             loss_Dgen = loss_Dgen.mean()
             loss['loss_Dgen'] = loss_Dgen
+            loss['Dgen_acc'] = (torch.nn.functional.sigmoid(gen_logits) < 0.5).to(dtype=float).mean()
             loss_Dgen.mul(gain).backward()
 
         # Dmain: Maximize logits for real images.
-        # Dr1: Apply R1 regularization.
+        # Dr1: Apply R1 regularization./
         if phase in ['Dmain', 'Dreg', 'Dboth']:
             x_tmp = x.detach().requires_grad_(phase in ['Dreg', 'Dboth'])
             y_tmp = y.detach().requires_grad_(phase in ['Dreg', 'Dboth'])
@@ -92,7 +95,9 @@ class GANLoss:
             loss_Dreal = 0
             if phase in ['Dmain', 'Dboth']:
                 loss_Dreal = torch.nn.functional.softplus(-real_logits)
+                # loss_Dreal = (1-real_logits)**2
                 loss_Dreal = loss_Dreal.mean()
+                loss['Dreal_acc'] = (torch.nn.functional.sigmoid(real_logits) > 0.5).to(dtype=float).mean()
                 loss['loss_Dreal'] = loss_Dreal
 
             loss_Dr1 = 0

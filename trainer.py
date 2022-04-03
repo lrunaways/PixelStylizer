@@ -32,15 +32,17 @@ def gan_train_loop(train_dataloader, val_dataloader, gan_model, device, log_freq
         gan_model.opt_step()
 
         for key in gen_loss_:
-            gen_loss[key] = gen_loss.get(key, 0)*0.8 + gen_loss_[key]*0.2
+            gen_loss[key] = gen_loss.get(key, gen_loss_[key])*0.8 + gen_loss_[key]*0.2
         for key in disk_loss_:
-            disk_loss[key] = disk_loss.get(key, 0)*0.8 + disk_loss_[key]*0.2
-        print(gen_loss)
-        print(disk_loss)
+            disk_loss[key] = disk_loss.get(key, disk_loss_[key])*0.8 + disk_loss_[key]*0.2
         if i % log_freq == 0:
+            DGLossRatio = gen_loss['loss_Gadv'] / disk_loss['loss_Dgen']
+            print(f"Dgen_acc: {disk_loss_['Dgen_acc']}, Dgen_real: {disk_loss_['Dreal_acc']}, GDLossRatio: {DGLossRatio}, loss_Gadv: {gen_loss['loss_Gadv']}")
+            # print(f"loss_Gadv: {gen_loss['loss_Gadv']}")
+            # print(f"loss_Dgen: {disk_loss['loss_Dgen']}, ")
             iteration = i + epoch * len(train_dataloader)
             gan_model.G.eval()
-            save_images(gan_model.G, val_dataloader.dataset, save_dirpath, [0], iteration, device)
+            save_images(gan_model.G, val_dataloader.dataset, save_dirpath, [0, 100, 200], iteration, device)
             gan_model.G.train()
 
 
@@ -65,7 +67,7 @@ def train_loop(train_dataloader, val_dataloader,
         if i % log_freq == 0:
             iteration = i + epoch * len(train_dataloader)
             model.eval()
-            save_images(model, val_dataloader.dataset, save_dirpath, [0], iteration, device)
+            save_images(model, val_dataloader.dataset, save_dirpath, [0, 100, 200], iteration, device)
             model.train()
 
         total_loss.backward()
@@ -104,6 +106,7 @@ def trainer(params):
     pass
 
     #TODO: endless iterations instead of epochs
+    #TODO: bhwc format
     for epoch in tqdm(range(params['n_epochs'])):
 
         # Train
@@ -113,6 +116,7 @@ def trainer(params):
                        epoch=epoch,
                        save_dirpath=params['save_dirpath']
                        )
+        print(1)
 
         # train_loop(train_dataloader, val_dataloader,
         #            GAN.G, GAN.opt_G,

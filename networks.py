@@ -9,7 +9,6 @@ class BasicG(torch.nn.Module):
         super().__init__()
         self.blocks = []
         n_blocks = 7
-        #TODO: noise to layers
         for i in range(n_blocks):
             self.blocks.extend([
                 torch.nn.Sequential(
@@ -21,11 +20,10 @@ class BasicG(torch.nn.Module):
         self.blocks = torch.nn.ModuleList(self.blocks)
 
     def forward(self, x):
-        input_x = x
-        #TODO: attention checkerboard
+        # input_x = x
         checkerboard = torch.zeros_like(x)
         checkerboard[:, :, 0::2, 1::2] = 0.01
-        checkerboard[:, :, 1::2, 0::2] = 0.01
+        # checkerboard[:, :, 1::2, 0::2] = 0.01
         x = torch.concat([x, checkerboard], axis=1)
         for i in range(len(self.blocks)):
             if i > 1 and i < len(self.blocks) - 1:
@@ -38,18 +36,31 @@ class BasicG(torch.nn.Module):
 class BasicD(torch.nn.Module):
     def __init__(self):
         super().__init__()
+        # self.input_norm = torch.nn.LazyBatchNorm2d()
+
         self.blocks = []
-        n_blocks = 4
+        n_blocks = 3
         for i in range(n_blocks):
             self.blocks.extend([
                 torch.nn.Sequential(
-                        torch.nn.LazyConv2d(1 if i == n_blocks-1 else 64, 2, stride=2),
+                        torch.nn.LazyConv2d(1 if i == n_blocks-1 else 128, 4, stride=2),
+                        # torch.nn.LazyBatchNorm2d(),
                         torch.nn.LeakyReLU(),
                 )
             ])
         self.blocks = torch.nn.ModuleList(self.blocks)
 
+    def calc_grad(self, x):
+        grad_x = (x[:, 0:1, :-1, :] - x[:, 0:1, 1:, :])
+        grad_y = (x[:, 0:1, :, :-1] - x[:, 0:1, :, 1:])
+        grad = torch.nn.functional.pad(grad_x, (0, 0, 1, 0)) + torch.constant_pad_nd(grad_y, (0, 1, 0, 0))
+        grad = (grad - grad.min())/(grad.max() - grad.min()) * 2 - 1
+        return grad
+
     def forward(self, x):
+        # x = self.input_norm(x)
+        grad = self.calc_grad(x)
+        x = torch.concat([x, grad], axis=1)
         for i in range(len(self.blocks)):
             if i > 0 and i < len(self.blocks) - 1:
                 x = self.blocks[i](x)

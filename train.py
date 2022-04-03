@@ -20,25 +20,25 @@ def create_parser():
         "--runs_dirpath", type=str, default=r"C:/Users/nplak/PycharmProjects/PixelStylizer/runs", help=""
     )
     parser.add_argument(
-        "--random_seed", type=int, default=24, help="seed"
+        "--random_seed", type=int, default=24, help=" "
     )
     parser.add_argument(
-        "--batch_size", type=int, default=64, help="seed"
+        "--batch_size", type=int, default=32, help=" "
     )
     parser.add_argument(
-        "--num_workers", type=int, default=4, help="seed"
+        "--num_workers", type=int, default=4, help=" "
     )
     parser.add_argument(
-        "--G_lr", type=float, default=2e-3, help="seed"
+        "--G_lr", type=float, default=2e-4*0.5, help=" "
     )
     parser.add_argument(
-        "--D_lr", type=float, default=2e-3, help="seed"
+        "--D_lr", type=float, default=2e-4, help=" "
     )
     parser.add_argument(
-        "--n_epochs", type=int, default=30, help="seed"
+        "--n_epochs", type=int, default=30, help=" "
     )
     parser.add_argument(
-        "--log_freq", type=int, default=16, help="seed"
+        "--log_freq", type=int, default=8, help=" "
     )
     return parser
 
