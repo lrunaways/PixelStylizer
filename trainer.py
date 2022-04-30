@@ -10,13 +10,14 @@ from tqdm import tqdm
 from dataset import get_dataloaders
 from networks import BasicGAN
 from losses import colour_loss_fn, GANLoss #, generator_loss
-from utils import save_images
+from utils import save_images, translate2d
+from augment import AugmentPipe
 
 def val_loop(model, dataloader):
    pass
 
 
-def gan_train_loop(train_dataloader, val_dataloader, gan_model, device, log_freq, epoch, save_dirpath):
+def gan_train_loop(train_dataloader, val_dataloader, augmentator, gan_model, device, log_freq, epoch, save_dirpath):
     gan_loss = GANLoss(gan_model.G, gan_model.D)
 
     gan_model.to(device)
@@ -24,10 +25,13 @@ def gan_train_loop(train_dataloader, val_dataloader, gan_model, device, log_freq
 
     gen_loss = {}
     disk_loss = {}
-    for i, (x, y_real, colours) in enumerate(tqdm(train_dataloader)):
+    for i, (x, y_real) in enumerate(tqdm(train_dataloader)):
+    # for i, (x, y_real, colours) in enumerate(tqdm(train_dataloader)):
+        x, y_real = augmentator(x, y_real)
         gan_model.zero_grad()
-        x, y_real, colours = x.to(device), y_real.to(device), colours.to(device)
+        # x, y_real, colours = x.to(device), y_real.to(device), colours.to(device)
         gen_loss_ = gan_loss.accumulate_gradients("Gadv", x, y_real, gain=1.0)
+        # gen_loss_ = gan_loss.accumulate_gradients("Gboth", x, y_real, gain=1.0)
         disk_loss_ = gan_loss.accumulate_gradients("Dboth", x, y_real, gain=1.0)
         gan_model.opt_step()
 
@@ -93,25 +97,29 @@ def trainer(params):
     GAN = BasicGAN(G_lr=params['G_lr'], D_lr=params['D_lr'], device=params['device'])
 
     # dummy forward to initialize Lazy modules
-    x, y, _ = next(iter(train_dataloader))
-    x, y = x.to(params['device']), y.to(params['device'])
+    # x, y, _ = next(iter(train_dataloader))
+    x, y = next(iter(train_dataloader))
+    # x, y = x.to(params['device']), y.to(params['device'])
     GAN.G(x)
     GAN.D(torch.concat([x, y], axis=1))
-    del x, y, _
+    # del x, y, _
+    del x, y
 
     # Resume from existing pickle
     pass
 
     # Setup augmentation
+    augmentator = AugmentPipe(xflip=0.5, rotate90=0.5, xint=0.5, scale=0.5, aniso=0.5)
     pass
 
     #TODO: endless iterations instead of epochs
     #TODO: bhwc format
+
     for epoch in tqdm(range(params['n_epochs'])):
 
         # Train
-        gan_train_loop(train_dataloader, val_dataloader,
-                       GAN, device=params['device'],
+        gan_train_loop(train_dataloader, val_dataloader, augmentator=augmentator,
+                       gan_model=GAN, device=params['device'],
                        log_freq=params['log_freq'],
                        epoch=epoch,
                        save_dirpath=params['save_dirpath']

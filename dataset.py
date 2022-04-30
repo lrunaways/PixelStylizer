@@ -8,22 +8,20 @@ from torch.utils.data import Dataset, Subset, DataLoader
 from torchvision.transforms import Compose, ToTensor
 
 def collate_fn(batch):
-    colours = [x[2] for x in batch]
-    colours = torch.nn.utils.rnn.pad_sequence(colours, batch_first=True, padding_value=-1)
-    # for i in range(len(batch)):
-    #     batch[i][2] = colours[i]
-    # return [x[0] for x in batch], [x[1] for x in batch], [x[2] for x in batch]
+    # colours = [x[2] for x in batch]
+    # colours = torch.nn.utils.rnn.pad_sequence(colours, batch_first=True, padding_value=-1)
     return (
         torch.stack([x[0] for x in batch]),
         torch.stack([x[1] for x in batch]),
-        colours
+        # colours
             )
 
 class PixelImageDataset(Dataset):
-    def __init__(self, img_dir, transform=None, target_transform=None):
+    def __init__(self, img_dir, transform=None, target_transform=None, device='cpu'):
         self.img_dir = img_dir
         self.transform = transform
         self.target_transform = target_transform
+        self.device = device
 
         self.filenames = glob.glob(img_dir)
 
@@ -34,16 +32,18 @@ class PixelImageDataset(Dataset):
         x = np.load(self.filenames[idx])
         # image, label = x[0, ..., 0:1], x[1, ..., 0:1]
         image, label = x[0, 48:-48, 48:-48, 0:1], x[1, 48:-48, 48:-48, 0:1]
-
+        # image, label = torch.tensor(image, device=self.device), torch.tensor(label, device=self.device)
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
             label = self.target_transform(label)
-            colours = label.unique()[:, None, None]
+            # colours = label.unique()[:, None, None]
             #filter colours
-        return [image, label, colours]
+        # return [image, label, colours]
+        return [image, label]
 
 def get_dataloaders(dirpath, batch_size, val_ratio=0.1, num_workers=0):
+    # transform = target_transform = None
     transform = Compose(
         [
             ToTensor(),

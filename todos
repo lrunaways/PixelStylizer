@@ -2,6 +2,10 @@
 2) Modulated convolutions and feature noise
 3) Attention checkerboard
 ---4) Discriminator accuracy
-5) Add constraints to number of colors
+5) Add constraints to number of colors for D
 6) Add model saving
 7) Predict image enthropy with discriminator and minimize it with generator
+8) Add normalizations
+9) LR schedule
+10) Mixed Precision
+11) Channels Last
