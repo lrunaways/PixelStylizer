@@ -41,6 +41,7 @@ class GANLoss:
         self.l1_loss = torch.nn.L1Loss()
 
     def run_G(self, x):
+        # z = torch.randn((x.shape[0], 256), device=x.device)
         y_gen = self.G(x)
         return y_gen
 

@@ -3,6 +3,34 @@ import os
 import numpy as np
 import torch
 
+# class Mapper(torch.nn.Module):
+#     def __init__(self,
+#                  z_dim,  # Input latent (Z) dimensionality.
+#                  w_dim,  # Intermediate latent (W) dimensionality.
+#                  num_ws,  # Number of intermediate latents to output.
+#                  num_layers=2,  # Number of mapping layers.
+#                  lr_multiplier=0.01,  # Learning rate multiplier for the mapping layers.
+#                 ):
+#         super().__init__()
+#         self.z_dim = z_dim
+#         self.w_dim = w_dim
+#         self.num_ws = num_ws
+#         self.num_layers = num_layers
+#         input_ = torch.nn.Linear(z_dim, w_dim, bias=True)
+#         intermediate = []
+#         for i in range(num_layers):
+#             intermediate.append(torch.nn.Linear(z_dim, w_dim, bias=True))
+#             intermediate.append(torch.nn.Linear(z_dim, w_dim, bias=True))
+#         out = torch.nn.Linear(w_dim, num_ws, bias=True)
+
+class Noise(torch.nn.Module):
+    def __init__(self):
+        super(Noise, self).__init__()
+        self.noise = torch.nn.Parameter(torch.randn(1)*0.01)
+
+    def forward(self, x):
+        noise = torch.randn_like(x) * self.noise
+        return x * noise
 
 class BasicG(torch.nn.Module):
     def __init__(self):
@@ -13,6 +41,7 @@ class BasicG(torch.nn.Module):
             self.blocks.extend([
                 torch.nn.Sequential(
                         torch.nn.LazyConv2d(1 if i == n_blocks-1 else 128, 3, padding='same', padding_mode="reflect"),
+                        Noise(),
                         torch.nn.LazyBatchNorm2d(),
                         torch.nn.LeakyReLU(),
                 )

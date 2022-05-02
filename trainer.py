@@ -30,8 +30,9 @@ def gan_train_loop(train_dataloader, val_dataloader, augmentator, gan_model, dev
         x, y_real = augmentator(x, y_real)
         gan_model.zero_grad()
         # x, y_real, colours = x.to(device), y_real.to(device), colours.to(device)
-        gen_loss_ = gan_loss.accumulate_gradients("Gadv", x, y_real, gain=1.0)
-        # gen_loss_ = gan_loss.accumulate_gradients("Gboth", x, y_real, gain=1.0)
+        x, y_real = x.to(device), y_real.to(device)
+        # gen_loss_ = gan_loss.accumulate_gradients("Gadv", x, y_real, gain=1.0)
+        gen_loss_ = gan_loss.accumulate_gradients("Gboth", x, y_real, gain=1.0)
         disk_loss_ = gan_loss.accumulate_gradients("Dboth", x, y_real, gain=1.0)
         gan_model.opt_step()
 
@@ -51,31 +52,31 @@ def gan_train_loop(train_dataloader, val_dataloader, augmentator, gan_model, dev
 
 
 
-def train_loop(train_dataloader, val_dataloader,
-               model, opt, device, log_freq, epoch, save_dirpath):
-    model.train()
-    loss_fn = torch.nn.L1Loss()
-    # loss_fn = gan_loss
-    c_w = 100
-    for i, (x, y_real, colours) in enumerate(tqdm(train_dataloader)):
-        x, y_real, colours = x.to(device), y_real.to(device), colours.to(device)
-        y_generated = model(x)
-
-        model.zero_grad()
-
-        colour_loss = colour_loss_fn(y_generated, colours)
-        loss = loss_fn(y_generated, y_real)
-        total_loss = loss + c_w*colour_loss
-        print(f"mse: {loss.item()} colour: {colour_loss.item()}")
-
-        if i % log_freq == 0:
-            iteration = i + epoch * len(train_dataloader)
-            model.eval()
-            save_images(model, val_dataloader.dataset, save_dirpath, [0, 100, 200], iteration, device)
-            model.train()
-
-        total_loss.backward()
-        opt.step()
+# def train_loop(train_dataloader, val_dataloader,
+#                model, opt, device, log_freq, epoch, save_dirpath):
+#     model.train()
+#     loss_fn = torch.nn.L1Loss()
+#     # loss_fn = gan_loss
+#     c_w = 100
+#     for i, (x, y_real, colours) in enumerate(tqdm(train_dataloader)):
+#         x, y_real, colours = x.to(device), y_real.to(device), colours.to(device)
+#         y_generated = model(x)
+#
+#         model.zero_grad()
+#
+#         colour_loss = colour_loss_fn(y_generated, colours)
+#         loss = loss_fn(y_generated, y_real)
+#         total_loss = loss + c_w*colour_loss
+#         print(f"mse: {loss.item()} colour: {colour_loss.item()}")
+#
+#         if i % log_freq == 0:
+#             iteration = i + epoch * len(train_dataloader)
+#             model.eval()
+#             save_images(model, val_dataloader.dataset, save_dirpath, [0, 100, 200], iteration, device)
+#             model.train()
+#
+#         total_loss.backward()
+#         opt.step()
 
 
 
@@ -99,7 +100,7 @@ def trainer(params):
     # dummy forward to initialize Lazy modules
     # x, y, _ = next(iter(train_dataloader))
     x, y = next(iter(train_dataloader))
-    # x, y = x.to(params['device']), y.to(params['device'])
+    x, y = x.to(params['device']), y.to(params['device'])
     GAN.G(x)
     GAN.D(torch.concat([x, y], axis=1))
     # del x, y, _
