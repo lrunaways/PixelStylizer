@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import torch
+from torch.nn.utils.parametrizations import spectral_norm
 
 # class Mapper(torch.nn.Module):
 #     def __init__(self,
@@ -26,11 +27,11 @@ import torch
 class Noise(torch.nn.Module):
     def __init__(self):
         super(Noise, self).__init__()
-        self.noise = torch.nn.Parameter(torch.randn(1)*0.01)
+        self.noise = torch.nn.Parameter(torch.Tensor([1e-2]))
 
     def forward(self, x):
         noise = torch.randn_like(x) * self.noise
-        return x * noise
+        return x + x * noise
 
 class BasicG(torch.nn.Module):
     def __init__(self):
@@ -72,8 +73,11 @@ class BasicD(torch.nn.Module):
         for i in range(n_blocks):
             self.blocks.extend([
                 torch.nn.Sequential(
-                        torch.nn.LazyConv2d(1 if i == n_blocks-1 else 128, 4, stride=2),
-                        # torch.nn.LazyBatchNorm2d(),
+                        spectral_norm(
+                            torch.nn.Conv2d(
+                                3 if i == 0 else 128,
+                                1 if i == n_blocks-1 else 128,  4, stride=2)
+                        ),
                         torch.nn.LeakyReLU(),
                 )
             ])
