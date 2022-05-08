@@ -34,9 +34,9 @@ class PixelImageDataset(Dataset):
         image, label = x[0, 48:-48, 48:-48, 0:1], x[1, 48:-48, 48:-48, 0:1]
         # image, label = torch.tensor(image, device=self.device), torch.tensor(label, device=self.device)
         if self.transform:
-            image = self.transform(image/255)
+            image = self.transform(image)
         if self.target_transform:
-            label = self.target_transform(label/255)
+            label = self.target_transform(label)
             # colours = label.unique()[:, None, None]
             #filter colours
         # return [image, label, colours]
