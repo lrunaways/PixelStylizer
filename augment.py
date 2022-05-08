@@ -183,7 +183,7 @@ class AugmentPipe(torch.nn.Module):
             Hz_fbank[i, (Hz_fbank.shape[1] - Hz_hi2.size) // 2 : (Hz_fbank.shape[1] + Hz_hi2.size) // 2] += Hz_hi2
         self.register_buffer('Hz_fbank', torch.as_tensor(Hz_fbank, dtype=torch.float32))
 
-    def forward(self, images, targets, debug_percentile=None):
+    def forward(self, images, targets=None, debug_percentile=None):
         assert isinstance(images, torch.Tensor) and images.ndim == 4
         batch_size, num_channels, height, width = images.shape
         device = images.device
@@ -289,7 +289,8 @@ class AugmentPipe(torch.nn.Module):
 
             # Pad image and adjust origin.
             images = torch.nn.functional.pad(input=images, pad=[mx0,mx1,my0,my1], mode='reflect')
-            targets = torch.nn.functional.pad(input=targets, pad=[mx0,mx1,my0,my1], mode='reflect')
+            if targets is not None:
+                targets = torch.nn.functional.pad(input=targets, pad=[mx0,mx1,my0,my1], mode='reflect')
             G_inv = translate2d((mx0 - mx1) / 2, (my0 - my1) / 2) @ G_inv
 
             # Upsample.
@@ -298,7 +299,8 @@ class AugmentPipe(torch.nn.Module):
             # images = upfirdn2d.upsample2d(x=images, f=self.Hz_geom, up=2)
             # targets = upfirdn2d.upsample2d(x=targets, f=self.Hz_geom, up=2)
             images = torch.nn.functional.interpolate(images, scale_factor=2, mode='bilinear')
-            targets = torch.nn.functional.interpolate(targets, scale_factor=2, mode='nearest')
+            if targets is not None:
+                targets = torch.nn.functional.interpolate(targets, scale_factor=2, mode='nearest')
             G_inv = scale2d(2, 2, device=device) @ G_inv @ scale2d_inv(2, 2, device=device)
             G_inv = translate2d(-0.5, -0.5, device=device) @ G_inv @ translate2d_inv(-0.5, -0.5, device=device)
 
@@ -307,13 +309,15 @@ class AugmentPipe(torch.nn.Module):
             G_inv = scale2d(2 / images.shape[3], 2 / images.shape[2], device=device) @ G_inv @ scale2d_inv(2 / shape[3], 2 / shape[2], device=device)
             grid = torch.nn.functional.affine_grid(theta=G_inv[:,:2,:], size=shape, align_corners=False)
             images = grid_sample_gradfix.grid_sample(images, grid, 'bilinear')
-            targets = grid_sample_gradfix.grid_sample(targets, grid, 'nearest')
+            if targets is not None:
+                targets = grid_sample_gradfix.grid_sample(targets, grid, 'nearest')
 
             # Downsample and crop.
             # images = upfirdn2d.downsample2d(x=images, f=self.Hz_geom, down=2, padding=-Hz_pad*2, flip_filter=True)
             # targets = upfirdn2d.downsample2d(x=targets, f=self.Hz_geom, down=2, padding=-Hz_pad*2, flip_filter=True)
             images = torch.nn.functional.interpolate(images, size=(height, width), mode='bilinear')
-            targets = torch.nn.functional.interpolate(targets, size=(height, width), mode='nearest')
+            if targets is not None:
+                targets = torch.nn.functional.interpolate(targets, size=(height, width), mode='nearest')
 
         # --------------------------------------------
         # Select parameters for color transformations.
@@ -380,6 +384,17 @@ class AugmentPipe(torch.nn.Module):
                 raise ValueError('Image must be RGB (3 channels) or L (1 channel)')
             images = images.reshape([batch_size, num_channels, height, width])
 
+            if targets is not None:
+                targets = targets.reshape([batch_size, num_channels, height * width])
+                if num_channels == 3:
+                    targets = C[:, :3, :3] @ targets + C[:, :3, 3:]
+                elif num_channels == 1:
+                    C = C[:, :3, :].mean(dim=1, keepdims=True)
+                    targets = targets * C[:, :, :3].sum(dim=2, keepdims=True) + C[:, :, 3:]
+                else:
+                    raise ValueError('Image must be RGB (3 channels) or L (1 channel)')
+                targets = targets.reshape([batch_size, num_channels, height, width])
+
         # ----------------------
         # Image-space filtering.
         # ----------------------
@@ -414,6 +429,15 @@ class AugmentPipe(torch.nn.Module):
             images = conv2d_gradfix.conv2d(input=images, weight=Hz_prime.unsqueeze(3), groups=batch_size*num_channels)
             images = images.reshape([batch_size, num_channels, height, width])
 
+            if targets is not None:
+                targets = targets.reshape([1, batch_size * num_channels, height, width])
+                targets = torch.nn.functional.pad(input=targets, pad=[p, p, p, p], mode='reflect')
+                targets = conv2d_gradfix.conv2d(input=targets, weight=Hz_prime.unsqueeze(2),
+                                               groups=batch_size * num_channels)
+                targets = conv2d_gradfix.conv2d(input=targets, weight=Hz_prime.unsqueeze(3),
+                                               groups=batch_size * num_channels)
+                targets = targets.reshape([batch_size, num_channels, height, width])
+
         # ------------------------
         # Image-space corruptions.
         # ------------------------
@@ -440,7 +464,12 @@ class AugmentPipe(torch.nn.Module):
             mask_y = (((coord_y + 0.5) / height - center[:, 1]).abs() >= size[:, 1] / 2)
             mask = torch.logical_or(mask_x, mask_y).to(torch.float32)
             images = images * mask
+            if targets is not None:
+                targets = targets * mask
 
-        return images, targets
+        if targets is not None:
+            return images, targets
+        else:
+            return images
 
 #----------------------------------------------------------------------------

@@ -41,7 +41,7 @@ def create_parser():
         "--G_phase", type=str, default="Gadv", help=" "
     )
     parser.add_argument(
-        "--log_freq", type=int, default=1, help=" "
+        "--log_freq", type=int, default=128, help=" "
     )
     return parser
 

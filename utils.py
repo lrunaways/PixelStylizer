@@ -63,10 +63,10 @@ def save_images_real(model, dirpath, iteration, device):
     image = cv2.imread(os.path.join(images_dirpath, image_name))
     image = apply_filter(image)
 
-    plot_name = f"it-{iteration}_{image_name}.png"
-    tensor_image = torch.as_tensor(image[None, None, :,:,0]).to(device, dtype=torch.float32)
-    pred = model(tensor_image)
-    axs[0].imshow(image[:,:,0], cmap='gray')
+    plot_name = f"it-{iteration}_{image_name.split('.')[0]}.png"
+    tensor_image = torch.as_tensor(image[None, None, :, :, 0]).to(device, dtype=torch.float32)
+    pred = model(tensor_image).cpu().numpy()
+    axs[0].imshow(image[:, :, 0], cmap='gray')
     axs[1].imshow(pred[0, 0], cmap='gray')
 
     fig.savefig(os.path.join(dirpath, data_domain, plot_name), dpi=200)

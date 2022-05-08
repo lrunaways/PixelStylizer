@@ -71,16 +71,15 @@ class BasicD(torch.nn.Module):
         self.blocks = []
         n_blocks = 3
         for i in range(n_blocks):
-            self.blocks.extend([
-                torch.nn.Sequential(
-                        spectral_norm(
+            block = []
+            block.append(spectral_norm(
                             torch.nn.Conv2d(
                                 3 if i == 0 else 128,
                                 1 if i == n_blocks-1 else 128,  4, stride=2)
-                        ),
-                        torch.nn.LeakyReLU(),
-                )
-            ])
+                        ))
+            if i != n_blocks-1:
+                block.append(torch.nn.LeakyReLU())
+            self.blocks.extend([torch.nn.Sequential(*block)])
         self.blocks = torch.nn.ModuleList(self.blocks)
 
     def calc_grad(self, x):

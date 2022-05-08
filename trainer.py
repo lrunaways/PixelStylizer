@@ -17,21 +17,25 @@ def val_loop(model, dataloader):
    pass
 
 
-def gan_train_loop(train_dataloader, val_dataloader, augmentator, gan_model, device, log_freq, epoch, save_dirpath, G_phase, D_phase):
-    gan_loss = GANLoss(gan_model.G, gan_model.D)
+def gan_train_loop(train_dataloader, val_dataloader,
+                   G_augmentator, D_augmentator, gan_model,
+                   device, log_freq, epoch, save_dirpath, G_phase, D_phase, ada_interval=4, ada_kimg=5):
+    # augment_p               = 0,        # Initial value of augmentation probability.
+    # ada_interval            = 4,        # How often to perform ADA adjustment?
+    # ada_kimg                = 500,      # ADA adjustment speed, measured in how many kimg it takes for p to increase/decrease by one unit.
+    gan_loss = GANLoss(gan_model.G, gan_model.D, augment_pipe=D_augmentator)
 
     gan_model.to(device)
     gan_model.train()
 
     gen_loss = {}
     disk_loss = {}
-    for i, (x, y_real) in enumerate(tqdm(train_dataloader)):
+    for batch_idx, (x, y_real) in enumerate(tqdm(train_dataloader)):
     # for i, (x, y_real, colours) in enumerate(tqdm(train_dataloader)):
-        x, y_real = augmentator(x, y_real)
+        x, y_real = G_augmentator(x, y_real)
         gan_model.zero_grad()
         # x, y_real, colours = x.to(device), y_real.to(device), colours.to(device)
         x, y_real = x.to(device), y_real.to(device)
-        # gen_loss_ = gan_loss.accumulate_gradients("Gadv", x, y_real, gain=1.0)
         gen_loss_ = gan_loss.accumulate_gradients(G_phase, x, y_real, gain=1.0)
         disk_loss_ = gan_loss.accumulate_gradients(D_phase, x, y_real, gain=1.0)
         gan_model.opt_step()
@@ -40,16 +44,20 @@ def gan_train_loop(train_dataloader, val_dataloader, augmentator, gan_model, dev
             gen_loss[key] = gen_loss.get(key, gen_loss_[key])*0.8 + gen_loss_[key]*0.2
         for key in disk_loss_:
             disk_loss[key] = disk_loss.get(key, disk_loss_[key])*0.8 + disk_loss_[key]*0.2
-        if i % log_freq == 0:
+        if batch_idx % log_freq == 0:
             DGLossRatio = gen_loss['loss_Gadv'] / disk_loss['loss_Dgen']
             print(f"Dgen_acc: {disk_loss_['Dgen_acc']}, Dgen_real: {disk_loss_['Dreal_acc']}, GDLossRatio: {DGLossRatio}, loss_Gadv: {gen_loss['loss_Gadv']}")
             # print(f"loss_Gadv: {gen_loss['loss_Gadv']}")
             # print(f"loss_Dgen: {disk_loss['loss_Dgen']}, ")
-            iteration = i + epoch * len(train_dataloader)
+            iteration = batch_idx + epoch * len(train_dataloader)
             gan_model.G.eval()
             save_images(gan_model.G, val_dataloader.dataset, save_dirpath, [0, 100, 200], iteration, device)
             save_images_real(gan_model.G, save_dirpath, iteration, device)
             gan_model.G.train()
+        # Execute ADA heuristic.
+        if (gan_loss.augment_pipe is not None) and (batch_idx % ada_interval == 0):
+            adjust = np.sign(disk_loss_['loss_Dreal'].detach() - 0.6) * (train_dataloader.batch_size * ada_interval) / (ada_kimg * 1000)
+            gan_loss.augment_pipe.p = torch.max(gan_loss.augment_pipe.p + adjust, torch.tensor(0.0, device=device))
 
 
 
@@ -111,16 +119,22 @@ def trainer(params):
     pass
 
     # Setup augmentation
-    augmentator = AugmentPipe(xflip=0.5, rotate90=0.5, xint=0.5, scale=0.5, aniso=0.5)
-    pass
 
+
+    G_augmentator = AugmentPipe(xflip=0.5, rotate90=0.5)
+    # D_augmentator = AugmentPipe(xflip=1, rotate90=1, xint=1, scale=1, rotate=1, aniso=1, xfrac=1,
+    #                             brightness=1, contrast=1, lumaflip=1, hue=1, saturation=1)
+    # D_augmentator.p = torch.tensor(0.0, device=params['device'])
+    D_augmentator = None
     #TODO: endless iterations instead of epochs
     #TODO: bhwc format
 
     for epoch in tqdm(range(params['n_epochs'])):
 
         # Train
-        gan_train_loop(train_dataloader, val_dataloader, augmentator=augmentator,
+        losses = gan_train_loop(train_dataloader, val_dataloader,
+                       G_augmentator=G_augmentator,
+                       D_augmentator=D_augmentator,
                        gan_model=GAN, device=params['device'],
                        log_freq=params['log_freq'],
                        epoch=epoch,
@@ -128,6 +142,7 @@ def trainer(params):
                        G_phase=params['G_phase'],
                        D_phase='Dboth',
                        )
+
         print(1)
 
         # train_loop(train_dataloader, val_dataloader,

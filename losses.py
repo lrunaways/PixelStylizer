@@ -46,9 +46,9 @@ class GANLoss:
         return y_gen
 
     def run_D(self, x, y):
-        disc_input = torch.concat([x, y], axis=1)
         if self.augment_pipe is not None:
-            disc_input = self.augment_pipe(disc_input)
+            x, y = self.augment_pipe(x, y)
+        disc_input = torch.concat([x, y], axis=1)
         logits = self.D(disc_input)
         return logits
 
@@ -83,7 +83,7 @@ class GANLoss:
             # loss_Dgen = (gen_logits)**2
             loss_Dgen = loss_Dgen.mean()
             loss['loss_Dgen'] = loss_Dgen
-            loss['Dgen_acc'] = (torch.nn.functional.sigmoid(gen_logits) < 0.5).to(dtype=float).mean()
+            loss['Dgen_acc'] = (torch.sigmoid(gen_logits) < 0.5).to(dtype=float).mean()
             loss_Dgen.mul(gain).backward()
 
         # Dmain: Maximize logits for real images.
@@ -98,7 +98,7 @@ class GANLoss:
                 loss_Dreal = torch.nn.functional.softplus(-real_logits)
                 # loss_Dreal = (1-real_logits)**2
                 loss_Dreal = loss_Dreal.mean()
-                loss['Dreal_acc'] = (torch.nn.functional.sigmoid(real_logits) > 0.5).to(dtype=float).mean()
+                loss['Dreal_acc'] = (torch.sigmoid(real_logits) > 0.5).to(dtype=float).mean()
                 loss['loss_Dreal'] = loss_Dreal
 
             loss_Dr1 = 0
