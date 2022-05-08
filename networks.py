@@ -33,20 +33,23 @@ class Noise(torch.nn.Module):
         noise = torch.randn_like(x) * self.noise
         return x + x * noise
 
+
 class BasicG(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.blocks = []
         n_blocks = 7
         for i in range(n_blocks):
+            lrelu_slope = 0.2 if i != n_blocks - 1 else 1.0
             self.blocks.extend([
                 torch.nn.Sequential(
                         torch.nn.LazyConv2d(1 if i == n_blocks-1 else 128, 3, padding='same', padding_mode="reflect"),
                         Noise(),
                         torch.nn.LazyBatchNorm2d(),
-                        torch.nn.LeakyReLU(),
+                        torch.nn.LeakyReLU(negative_slope=lrelu_slope),
                 )
             ])
+
         self.blocks = torch.nn.ModuleList(self.blocks)
 
     def forward(self, x):
@@ -71,15 +74,17 @@ class BasicD(torch.nn.Module):
         self.blocks = []
         n_blocks = 4
         for i in range(n_blocks):
-            block = []
-            block.append(spectral_norm(
+            lrelu_slope = 0.2 if i != n_blocks - 1 else 1.0
+            self.blocks.extend([
+                torch.nn.Sequential(
+                        spectral_norm(
                             torch.nn.Conv2d(
-                                3 if i == 0 else 256,
-                                1 if i == n_blocks-1 else 256,  4, stride=2)
-                        ))
-            if i != n_blocks-1:
-                block.append(torch.nn.LeakyReLU())
-            self.blocks.extend([torch.nn.Sequential(*block)])
+                                3 if i == 0 else 128,
+                                1 if i == n_blocks-1 else 128,  4, stride=2)
+                        ),
+                        torch.nn.LeakyReLU(negative_slope=lrelu_slope),
+                )
+            ])
         self.blocks = torch.nn.ModuleList(self.blocks)
 
     def calc_grad(self, x):
