@@ -69,13 +69,13 @@ class BasicD(torch.nn.Module):
         # self.input_norm = torch.nn.LazyBatchNorm2d()
 
         self.blocks = []
-        n_blocks = 3
+        n_blocks = 4
         for i in range(n_blocks):
             block = []
             block.append(spectral_norm(
                             torch.nn.Conv2d(
-                                3 if i == 0 else 128,
-                                1 if i == n_blocks-1 else 128,  4, stride=2)
+                                3 if i == 0 else 256,
+                                1 if i == n_blocks-1 else 256,  4, stride=2)
                         ))
             if i != n_blocks-1:
                 block.append(torch.nn.LeakyReLU())

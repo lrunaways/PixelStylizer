@@ -29,9 +29,10 @@ class PixelImageDataset(Dataset):
         return len(self.filenames)
 
     def __getitem__(self, idx):
+        pad = 32
         x = np.load(self.filenames[idx])
         # image, label = x[0, ..., 0:1], x[1, ..., 0:1]
-        image, label = x[0, 48:-48, 48:-48, 0:1], x[1, 48:-48, 48:-48, 0:1]
+        image, label = x[0, pad:-pad, pad:-pad, 0:1], x[1, pad:-pad, pad:-pad, 0:1]
         # image, label = torch.tensor(image, device=self.device), torch.tensor(label, device=self.device)
         if self.transform:
             image = self.transform(image)
