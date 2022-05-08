@@ -56,8 +56,10 @@ def gan_train_loop(train_dataloader, val_dataloader,
             gan_model.G.train()
         # Execute ADA heuristic.
         if (gan_loss.augment_pipe is not None) and (batch_idx % ada_interval == 0):
+            print(f"loss_Dreal: {float(disk_loss_['loss_Dreal'].detach())}")
             adjust = np.sign(disk_loss_['loss_Dreal'].detach() - 0.6) * (train_dataloader.batch_size * ada_interval) / (ada_kimg * 1000)
             gan_loss.augment_pipe.p = torch.max(gan_loss.augment_pipe.p + adjust, torch.tensor(0.0, device=device))
+            print(f"New augment p: {gan_loss.augment_pipe.p}")
 
 
 
@@ -122,10 +124,10 @@ def trainer(params):
 
 
     G_augmentator = AugmentPipe(xflip=0.5, rotate90=0.5)
-    # D_augmentator = AugmentPipe(xflip=1, rotate90=1, xint=1, scale=1, rotate=1, aniso=1, xfrac=1,
-    #                             brightness=1, contrast=1, lumaflip=1, hue=1, saturation=1)
-    # D_augmentator.p = torch.tensor(0.0, device=params['device'])
-    D_augmentator = None
+    D_augmentator = AugmentPipe(xflip=1, rotate90=1, xint=1, scale=1, rotate=0, aniso=1, xfrac=1,
+                                brightness=1, contrast=1, lumaflip=1, hue=1, saturation=1)
+    D_augmentator.p = torch.tensor(0.0, device=params['device'])
+    # D_augmentator = None
     #TODO: endless iterations instead of epochs
     #TODO: bhwc format
 
