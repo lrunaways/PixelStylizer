@@ -57,7 +57,7 @@ def gan_train_loop(train_dataloader, val_dataloader,
         # Execute ADA heuristic.
         if (gan_loss.augment_pipe is not None) and (batch_idx % ada_interval == 0):
             print(f"loss_Dreal: {float(disk_loss_['loss_Dreal'].detach())}")
-            adjust = np.sign(disk_loss_['loss_Dreal'].detach() - 0.6) * (train_dataloader.batch_size * ada_interval) / (ada_kimg * 1000)
+            adjust = np.sign(disk_loss_['real_logits_sign'].cpu() - 0.6) * (train_dataloader.batch_size * ada_interval) / (ada_kimg * 1000)
             gan_loss.augment_pipe.p = torch.max(gan_loss.augment_pipe.p + adjust, torch.tensor(0.0, device=device))
             print(f"New augment p: {gan_loss.augment_pipe.p}")
 

@@ -98,6 +98,7 @@ class GANLoss:
                 loss_Dreal = torch.nn.functional.softplus(-real_logits)
                 # loss_Dreal = (1-real_logits)**2
                 loss_Dreal = loss_Dreal.mean()
+                loss['real_logits_sign'] = real_logits.mean().sign().detach()
                 loss['Dreal_acc'] = (torch.sigmoid(real_logits) > 0.5).to(dtype=float).mean()
                 loss['loss_Dreal'] = loss_Dreal
 
