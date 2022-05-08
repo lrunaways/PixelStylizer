@@ -10,14 +10,14 @@ from tqdm import tqdm
 from dataset import get_dataloaders
 from networks import BasicGAN
 from losses import colour_loss_fn, GANLoss #, generator_loss
-from utils import save_images, translate2d
+from utils import save_images, save_images_real
 from augment import AugmentPipe
 
 def val_loop(model, dataloader):
    pass
 
 
-def gan_train_loop(train_dataloader, val_dataloader, augmentator, gan_model, device, log_freq, epoch, save_dirpath):
+def gan_train_loop(train_dataloader, val_dataloader, augmentator, gan_model, device, log_freq, epoch, save_dirpath, G_phase, D_phase):
     gan_loss = GANLoss(gan_model.G, gan_model.D)
 
     gan_model.to(device)
@@ -32,8 +32,8 @@ def gan_train_loop(train_dataloader, val_dataloader, augmentator, gan_model, dev
         # x, y_real, colours = x.to(device), y_real.to(device), colours.to(device)
         x, y_real = x.to(device), y_real.to(device)
         # gen_loss_ = gan_loss.accumulate_gradients("Gadv", x, y_real, gain=1.0)
-        gen_loss_ = gan_loss.accumulate_gradients("Gboth", x, y_real, gain=1.0)
-        disk_loss_ = gan_loss.accumulate_gradients("Dboth", x, y_real, gain=1.0)
+        gen_loss_ = gan_loss.accumulate_gradients(G_phase, x, y_real, gain=1.0)
+        disk_loss_ = gan_loss.accumulate_gradients(D_phase, x, y_real, gain=1.0)
         gan_model.opt_step()
 
         for key in gen_loss_:
@@ -48,6 +48,7 @@ def gan_train_loop(train_dataloader, val_dataloader, augmentator, gan_model, dev
             iteration = i + epoch * len(train_dataloader)
             gan_model.G.eval()
             save_images(gan_model.G, val_dataloader.dataset, save_dirpath, [0, 100, 200], iteration, device)
+            save_images_real(gan_model.G, save_dirpath, iteration, device)
             gan_model.G.train()
 
 
@@ -123,7 +124,9 @@ def trainer(params):
                        gan_model=GAN, device=params['device'],
                        log_freq=params['log_freq'],
                        epoch=epoch,
-                       save_dirpath=params['save_dirpath']
+                       save_dirpath=params['save_dirpath'],
+                       G_phase=params['G_phase'],
+                       D_phase='Dboth',
                        )
         print(1)
 

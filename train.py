@@ -38,7 +38,10 @@ def create_parser():
         "--n_epochs", type=int, default=30, help=" "
     )
     parser.add_argument(
-        "--log_freq", type=int, default=8, help=" "
+        "--G_phase", type=str, default="Gadv", help=" "
+    )
+    parser.add_argument(
+        "--log_freq", type=int, default=1, help=" "
     )
     return parser
 
@@ -56,6 +59,7 @@ def main(args):
         "device": torch.device("cuda:0" if torch.cuda.is_available() else "cpu"),
         "log_freq": args.log_freq,
         "runs_dirpath": args.runs_dirpath,
+        "G_phase": args.G_phase,
     }
 
     all_runs_paths = glob.glob(os.path.join(params['runs_dirpath'], "*"))
