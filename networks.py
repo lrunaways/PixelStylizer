@@ -79,8 +79,8 @@ class BasicD(torch.nn.Module):
                 torch.nn.Sequential(
                         spectral_norm(
                             torch.nn.Conv2d(
-                                3 if i == 0 else 128,
-                                1 if i == n_blocks-1 else 128,  4, stride=2)
+                                3 if i == 0 else 64,
+                                1 if i == n_blocks-1 else 64,  4, stride=2)
                         ),
                         torch.nn.LeakyReLU(negative_slope=lrelu_slope),
                 )
