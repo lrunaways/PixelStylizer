@@ -19,7 +19,7 @@ def val_loop(model, dataloader):
 
 def gan_train_loop(train_dataloader, val_dataloader,
                    G_augmentator, D_augmentator, gan_model,
-                   device, log_freq, epoch, save_dirpath, G_phase, D_phase, ada_interval=4, ada_kimg=5):
+                   device, log_freq, epoch, save_dirpath, G_phase, D_phase, ada_interval=16, ada_kimg=20):
     # augment_p               = 0,        # Initial value of augmentation probability.
     # ada_interval            = 4,        # How often to perform ADA adjustment?
     # ada_kimg                = 500,      # ADA adjustment speed, measured in how many kimg it takes for p to increase/decrease by one unit.
@@ -32,7 +32,8 @@ def gan_train_loop(train_dataloader, val_dataloader,
     disk_loss = {}
     for batch_idx, (x, y_real) in enumerate(tqdm(train_dataloader)):
     # for i, (x, y_real, colours) in enumerate(tqdm(train_dataloader)):
-        x, y_real = G_augmentator(x, y_real)
+        if G_augmentator is not None:
+            x, y_real = G_augmentator(x, y_real)
         gan_model.zero_grad()
         # x, y_real, colours = x.to(device), y_real.to(device), colours.to(device)
         x, y_real = x.to(device), y_real.to(device)
@@ -56,6 +57,7 @@ def gan_train_loop(train_dataloader, val_dataloader,
             gan_model.G.train()
         # Execute ADA heuristic.
         if (gan_loss.augment_pipe is not None) and (batch_idx % ada_interval == 0):
+            print()
             print(f"loss_Dreal: {float(disk_loss_['loss_Dreal'].detach())}")
             adjust = np.sign(disk_loss_['real_logits_sign'].cpu() - 0.6) * (train_dataloader.batch_size * ada_interval) / (ada_kimg * 1000)
             gan_loss.augment_pipe.p = torch.max(gan_loss.augment_pipe.p + adjust, torch.tensor(0.0, device=device))
@@ -123,11 +125,13 @@ def trainer(params):
     # Setup augmentation
 
 
-    G_augmentator = AugmentPipe(xflip=0.5, rotate90=0.5)
-    D_augmentator = AugmentPipe(xflip=1, rotate90=1, xint=1, scale=1, rotate=0, aniso=1, xfrac=1,
-                                brightness=1, contrast=1, lumaflip=1, hue=1, saturation=1)
-    D_augmentator.p = torch.tensor(0.0, device=params['device'])
-    # D_augmentator = None
+    # G_augmentator = AugmentPipe(xflip=0.5, rotate90=0.5)
+    # D_augmentator = AugmentPipe(xflip=1, rotate90=1, xint=1, scale=1, rotate=0, aniso=1, xfrac=1,
+    #                             brightness=1, contrast=1, lumaflip=1, hue=1, saturation=1)
+    # D_augmentator.p = torch.tensor(0.0, device=params['device'])
+
+    G_augmentator = None
+    D_augmentator = None
     #TODO: endless iterations instead of epochs
     #TODO: bhwc format
 
