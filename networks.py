@@ -56,7 +56,7 @@ class BasicG(torch.nn.Module):
         # input_x = x
         checkerboard = torch.zeros_like(x)
         checkerboard[:, :, 0::2, 1::2] = 0.01
-        # checkerboard[:, :, 1::2, 0::2] = 0.01
+        checkerboard[:, :, 1::2, 0::2] = 0.01
         x = torch.concat([x, checkerboard], axis=1)
         for i in range(len(self.blocks)):
             if i > 1 and i < len(self.blocks) - 1:
@@ -72,7 +72,7 @@ class BasicD(torch.nn.Module):
         # self.input_norm = torch.nn.LazyBatchNorm2d()
 
         self.blocks = []
-        n_blocks = 4
+        n_blocks = 3
         for i in range(n_blocks):
             lrelu_slope = 0.2 if i != n_blocks - 1 else 1.0
             self.blocks.extend([
