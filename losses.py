@@ -62,13 +62,18 @@ class GANLoss:
             self.D.requires_grad_(True)
         loss = {}
         # Gadv: Maximize logits for generated images.
-        if phase in ['Gboth', 'Gadv', 'Gbase']:
+        if phase in ['Gboth', 'Gadv', 'Gbasic']:
             y_gen = self.run_G(x)
+            print()
+            print(y_gen.min())
+            print(y_gen.max())
+            print(y.min())
             total_loss = 0
-            if phase in ['Gboth', 'Gbase']:
+            if phase in ['Gboth', 'Gbasic']:
                 basic_loss = self.l1_loss(y_gen, y)
                 loss['basic_loss'] = basic_loss
                 total_loss += basic_loss
+                total_loss += ((y_gen[y_gen < 0] + 2)**2).sum()
             if phase in ['Gboth', 'Gadv']:
                 gen_logits = self.run_D(x, y_gen)
                 loss_Gadv = torch.nn.functional.softplus(-gen_logits)

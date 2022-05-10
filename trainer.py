@@ -38,16 +38,18 @@ def gan_train_loop(train_dataloader, val_dataloader,
         # x, y_real, colours = x.to(device), y_real.to(device), colours.to(device)
         x, y_real = x.to(device), y_real.to(device)
         gen_loss_ = gan_loss.accumulate_gradients(G_phase, x, y_real, gain=1.0)
-        disk_loss_ = gan_loss.accumulate_gradients(D_phase, x, y_real, gain=1.0)
+        # disk_loss_ = gan_loss.accumulate_gradients(D_phase, x, y_real, gain=1.0)
         gan_model.opt_step()
 
         for key in gen_loss_:
             gen_loss[key] = gen_loss.get(key, gen_loss_[key])*0.8 + gen_loss_[key]*0.2
-        for key in disk_loss_:
-            disk_loss[key] = disk_loss.get(key, disk_loss_[key])*0.8 + disk_loss_[key]*0.2
+        print(f'G basic loss: {gen_loss["basic_loss"]}')
+        # for key in disk_loss_:
+        #     disk_loss[key] = disk_loss.get(key, disk_loss_[key])*0.8 + disk_loss_[key]*0.2
+
         if batch_idx % log_freq == 0:
-            DGLossRatio = gen_loss['loss_Gadv'] / disk_loss['loss_Dgen']
-            print(f"Dgen_acc: {disk_loss_['Dgen_acc']}, Dgen_real: {disk_loss_['Dreal_acc']}, GDLossRatio: {DGLossRatio}, loss_Gadv: {gen_loss['loss_Gadv']}")
+            # DGLossRatio = gen_loss.get('loss_Gadv', 0) / disk_loss['loss_Dgen']
+            # print(f"Dgen_acc: {disk_loss_['Dgen_acc']}, Dgen_real: {disk_loss_['Dreal_acc']}, GDLossRatio: {DGLossRatio}, loss_Gadv: {gen_loss.get('loss_Gadv', 0)}")
             # print(f"loss_Gadv: {gen_loss['loss_Gadv']}")
             # print(f"loss_Dgen: {disk_loss['loss_Dgen']}, ")
             iteration = batch_idx + epoch * len(train_dataloader)
@@ -56,12 +58,12 @@ def gan_train_loop(train_dataloader, val_dataloader,
             save_images_real(gan_model.G, save_dirpath, iteration, device)
             gan_model.G.train()
         # Execute ADA heuristic.
-        if (gan_loss.augment_pipe is not None) and (batch_idx % ada_interval == 0):
-            print()
-            print(f"loss_Dreal: {float(disk_loss_['loss_Dreal'].detach())}")
-            adjust = np.sign(disk_loss_['real_logits_sign'].cpu() - 0.6) * (train_dataloader.batch_size * ada_interval) / (ada_kimg * 1000)
-            gan_loss.augment_pipe.p = torch.max(gan_loss.augment_pipe.p + adjust, torch.tensor(0.0, device=device))
-            print(f"New augment p: {gan_loss.augment_pipe.p}")
+        # if (gan_loss.augment_pipe is not None) and (batch_idx % ada_interval == 0):
+        #     print()
+        #     print(f"loss_Dreal: {float(disk_loss_['loss_Dreal'].detach())}")
+        #     adjust = np.sign(disk_loss_['real_logits_sign'].cpu() - 0.6) * (train_dataloader.batch_size * ada_interval) / (ada_kimg * 1000)
+        #     gan_loss.augment_pipe.p = torch.max(gan_loss.augment_pipe.p + adjust, torch.tensor(0.0, device=device))
+        #     print(f"New augment p: {gan_loss.augment_pipe.p}")
 
 
 

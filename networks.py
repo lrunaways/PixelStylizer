@@ -33,6 +33,13 @@ class Noise(torch.nn.Module):
         noise = torch.randn_like(x) * self.noise
         return x + x * noise
 
+class Diver(torch.nn.Module):
+    def __init__(self):
+        super(Diver, self).__init__()
+
+    def forward(self, x):
+        return x/1. + 0.
+
 
 class BasicG(torch.nn.Module):
     def __init__(self):
@@ -41,11 +48,20 @@ class BasicG(torch.nn.Module):
         n_blocks = 7
         for i in range(n_blocks):
             lrelu_slope = 0.2 if i != n_blocks - 1 else 1.0
-            self.blocks.extend([
+            if i != n_blocks-1:
+              self.blocks.extend([
+                  torch.nn.Sequential(
+                          torch.nn.LazyConv2d(1 if i == n_blocks-1 else 128, 3, padding='same', padding_mode="reflect"),
+                          Noise(),
+                          torch.nn.LazyBatchNorm2d(),
+                          torch.nn.LeakyReLU(negative_slope=lrelu_slope),
+                  )
+              ])
+            else:
+              self.blocks.extend([
                 torch.nn.Sequential(
-                        torch.nn.LazyConv2d(1 if i == n_blocks-1 else 128, 3, padding='same', padding_mode="reflect"),
-                        Noise(),
-                        torch.nn.LazyBatchNorm2d(),
+                        torch.nn.LazyConv2d(1, 3, padding='same', padding_mode="reflect"),
+                        Diver(),
                         torch.nn.LeakyReLU(negative_slope=lrelu_slope),
                 )
             ])
@@ -54,10 +70,10 @@ class BasicG(torch.nn.Module):
 
     def forward(self, x):
         # input_x = x
-        checkerboard = torch.zeros_like(x)
-        checkerboard[:, :, 0::2, 1::2] = 0.01
-        checkerboard[:, :, 1::2, 0::2] = 0.01
-        x = torch.concat([x, checkerboard], axis=1)
+        # checkerboard = torch.zeros_like(x)
+        # checkerboard[:, :, 0::2, 1::2] = 0.01
+        # checkerboard[:, :, 1::2, 0::2] = 0.01
+        # x = torch.concat([x, checkerboard], axis=1)
         for i in range(len(self.blocks)):
             if i > 1 and i < len(self.blocks) - 1:
                 x = self.blocks[i](x) + x
