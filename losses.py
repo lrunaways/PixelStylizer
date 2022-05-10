@@ -64,19 +64,19 @@ class GANLoss:
         # Gadv: Maximize logits for generated images.
         if phase in ['Gboth', 'Gadv', 'Gbase']:
             y_gen = self.run_G(x)
-            loss = 0
+            total_loss = 0
             if phase in ['Gboth', 'Gbase']:
                 basic_loss = self.l1_loss(y_gen, y)
                 loss['basic_loss'] = basic_loss
-                loss += basic_loss
+                total_loss += basic_loss
             if phase in ['Gboth', 'Gadv']:
                 gen_logits = self.run_D(x, y_gen)
                 loss_Gadv = torch.nn.functional.softplus(-gen_logits)
                 # loss_Gadv = (1 - gen_logits)**2
                 loss_Gadv = loss_Gadv.mean()
                 loss['loss_Gadv'] = loss_Gadv
-                loss += loss_Gadv
-            (loss).mul(gain).backward()
+                total_loss += loss_Gadv
+            total_loss.mul(gain).backward()
 
         # Dmain: Minimize logits for generated images.
         if phase in ['Dmain', 'Dboth']:
@@ -96,7 +96,7 @@ class GANLoss:
             y_tmp = y.detach().requires_grad_(phase in ['Dreg', 'Dboth'])
             real_logits = self.run_D(x_tmp, y_tmp)
 
-            loss_Dreal = 0
+            total_loss = 0
             if phase in ['Dmain', 'Dboth']:
                 loss_Dreal = torch.nn.functional.softplus(-real_logits)
                 # loss_Dreal = (1-real_logits)**2
@@ -104,8 +104,8 @@ class GANLoss:
                 loss['real_logits_sign'] = real_logits.mean().sign().detach()
                 loss['Dreal_acc'] = (torch.sigmoid(real_logits) > 0.5).to(dtype=float).mean()
                 loss['loss_Dreal'] = loss_Dreal
+                total_loss += loss_Dreal
 
-            loss_Dr1 = 0
             if phase in ['Dreg', 'Dboth']:
                 r1_grads = \
                 torch.autograd.grad(
@@ -115,7 +115,8 @@ class GANLoss:
                 loss_Dr1 = r1_penalty * (self.r1_gamma / 2)
                 loss_Dr1 = loss_Dr1.mean()
                 loss['loss_Dr1'] = loss_Dr1
-            (loss_Dreal + loss_Dr1).mul(gain).backward()
+                total_loss += loss_Dr1
+            total_loss.mul(gain).backward()
         return loss
 
 def additional_entropy(y_true, y_pred):
